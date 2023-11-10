@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgresRepo
+    environment:
+      POSTGRES_DB: auth_postgres_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Определите Docker volume для PostgreSQL
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    environment:
+      #      MONGO_INITDB_ROOT_USERNAME: root
+      #      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: auth_mongo_db
+    volumes:
+      - mongodb_data:/data/db # Определите Docker volume для MongoDB
+    ports:
+      - "27017:27017"
+    restart: always
+
+volumes:
+  postgres_data: # Определение Docker volume для PostgreSQL
+  mongodb_data: # Определение Docker volume для MongoDB
