@@ -17,7 +17,7 @@ func NewMarketCategoryService(
 	userService *UserService,
 ) (*MarketCategoryService, error) {
 	mongoDb := mongoRepo.NewCategoryRepoM(userService.log, mongo, "categories")
-	err := mongoDb.CreateIndexes()
+	err := mongoDb.CreateIndexesCategory()
 	if err != nil {
 		return nil, err
 	}
@@ -25,6 +25,14 @@ func NewMarketCategoryService(
 		user:  userService,
 		mongo: mongoDb,
 	}, nil
+}
+
+func (c *MarketCategoryService) GetByGuid(guid string) (*models.Category, error) {
+	category, err := c.mongo.GetByGuid(guid)
+	if err != nil {
+		return nil, err
+	}
+	return category, nil
 }
 
 func (c *MarketCategoryService) GetAllCategories() ([]*models.Category, error) {

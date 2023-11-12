@@ -15,6 +15,7 @@ import (
 )
 
 var DuplicateNameError = fmt.Errorf("category with duplicate name")
+var ErrCategoryNotFound = fmt.Errorf("category not found")
 
 type CategoryRepoM struct {
 	log        *logging.Logger
@@ -30,8 +31,8 @@ func NewCategoryRepoM(log *logging.Logger, mongo *mongodb.MongoDB, collection st
 	}
 }
 
-func (u *CategoryRepoM) CreateIndexes() error {
-	const op = "CategoryRepoM.CreateIndexes"
+func (u *CategoryRepoM) CreateIndexesCategory() error {
+	const op = "CategoryRepoM.CreateIndexesCategory"
 	indexModel := mongo.IndexModel{
 		Keys:    bson.M{"name": 1},
 		Options: options.Index().SetUnique(true),
@@ -39,11 +40,11 @@ func (u *CategoryRepoM) CreateIndexes() error {
 
 	_, err := u.mongo.GetCollection(u.collection).Indexes().CreateOne(context.TODO(), indexModel)
 	if err != nil {
-		u.log.Error("Error creating indexes", zap.String("op", "CreateIndexes"), zap.Error(err))
+		u.log.Error("Error creating indexes", zap.String("op", op), zap.Error(err))
 		return err
 	}
 
-	u.log.Info("Indexes created", zap.String("op", op))
+	u.log.Debug("Indexes category created", zap.String("op", op))
 
 	return nil
 }
@@ -83,6 +84,22 @@ func (u *CategoryRepoM) GetCategories() ([]*models.Category, error) {
 	return categories, nil
 }
 
+func (u *CategoryRepoM) GetByGuid(guid string) (*models.Category, error) {
+	const op = "CategoryRepoM.GetByGuid"
+	var category *models.Category
+
+	collection := u.mongo.GetCollection(u.collection)
+	err := collection.FindOne(context.TODO(), bson.M{"guid": guid}).Decode(&category)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, ErrCategoryNotFound
+		}
+		u.log.Error("Error getting category by guid", zap.String("op", op), zap.Error(err))
+		return nil, err
+	}
+	return category, nil
+}
+
 func (u *CategoryRepoM) AddCategory(category *models.Category) error {
 	const op = "CategoryRepoM.AddCategory"
 
@@ -91,7 +108,7 @@ func (u *CategoryRepoM) AddCategory(category *models.Category) error {
 	if err != nil {
 		var writeException mongo.WriteException
 		if errors.As(err, &writeException) {
-			return u.generateDuplicateError(writeException)
+			return u.generateDuplicateErrorC(writeException)
 		}
 		u.log.Error("Error adding category", zap.String("op", op), zap.Error(err))
 		return err
@@ -99,8 +116,8 @@ func (u *CategoryRepoM) AddCategory(category *models.Category) error {
 	return nil
 }
 
-func (u *CategoryRepoM) generateDuplicateError(err mongo.WriteException) error {
-	const op = "CategoryRepoM.generateDuplicateError"
+func (u *CategoryRepoM) generateDuplicateErrorC(err mongo.WriteException) error {
+	const op = "CategoryRepoM.generateDuplicateErrorC"
 
 	for _, we := range err.WriteErrors {
 		if we.Code == 11000 {

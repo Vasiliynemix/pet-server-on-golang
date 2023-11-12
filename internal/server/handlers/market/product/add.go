@@ -8,17 +8,22 @@ import (
 	"PetProjectGo/internal/services"
 	"PetProjectGo/pkg/logging"
 	"github.com/go-chi/render"
+	"github.com/mitchellh/mapstructure"
 	"go.uber.org/zap"
 	"net/http"
 )
 
 type RequestProduct struct {
-	Name string `json:"name" validate:"required"`
+	CategoryId  string `json:"category_id" validate:"required" mapstructure:"category_id"`
+	Name        string `json:"name" validate:"required"`
+	Price       int    `json:"price" validate:"required"`
+	Description string `json:"description" validate:"required"`
+	Quantity    int    `json:"quantity,omitempty"`
 }
 
 type ResponseProduct struct {
 	resp.Response
-	Categories []*models.Category `json:"categories"`
+	Product *models.Product `json:"product"`
 }
 
 type HandlerProductAdd struct {
@@ -59,20 +64,24 @@ func (h *HandlerProductAdd) AddProductHandler() http.HandlerFunc {
 			render.JSON(w, r, resp.Error(errs))
 			return
 		}
-		err = h.marketProductService.AddProduct(req.Name)
+
+		var newProduct *services.NewProductM
+		err = mapstructure.Decode(req, &newProduct)
+		if err != nil {
+			h.log.Error("Failed to parse request body", zap.String("op", op), zap.Error(err))
+			render.JSON(w, r, resp.Error(err.Error()))
+			return
+		}
+
+		product, err := h.marketProductService.AddProduct(newProduct)
 		if err != nil {
 			render.JSON(w, r, resp.Error(err.Error()))
 			return
 		}
 
-		categories, err := h.marketCategoryService.GetAllCategories()
-		if err != nil {
-			render.JSON(w, r, resp.Error(err.Error()))
-			return
-		}
 		render.JSON(w, r, ResponseProduct{
-			Response:   resp.OK(),
-			Categories: categories,
+			Response: resp.OK(),
+			Product:  product,
 		})
 	}
 }

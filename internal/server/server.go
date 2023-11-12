@@ -58,7 +58,11 @@ func NewWebServer(
 	if err != nil {
 		return nil, err
 	}
-	marketPService := services.NewMarketProductService(mongo, marketCService)
+
+	marketPService, err := services.NewMarketProductService(mongo, marketCService)
+	if err != nil {
+		return nil, err
+	}
 	return &Server{
 		log:    log,
 		cfg:    cfg,
