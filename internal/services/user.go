@@ -23,6 +23,7 @@ var InvalidLoginPassword = fmt.Errorf("invalid login or password")
 var RefreshTokenExpiredError = fmt.Errorf("refresh token expired")
 var UserIsLogged = fmt.Errorf("user is logged")
 var UserIsUnLogged = fmt.Errorf("user is unlogged")
+var Unauthorized = fmt.Errorf("unauthorized")
 
 type NewUserM struct {
 	Login    string `json:"login"`
@@ -52,6 +53,23 @@ func NewUserService(
 		mongo:    mongoDb,
 		postgres: postgresDb,
 	}
+}
+
+func (u *UserService) GetMeInfo(token string) (string, *tokenGen.UserInfoToken, error) {
+	userInfoToken, ok := tokenGen.VerifyToken(u.cfg.SecretKeyToken, token)
+	if userInfoToken == nil {
+		return "", nil, Unauthorized
+	}
+	user, _ := u.mongo.GetByGuid(userInfoToken.ID)
+	if !user.IsLogged {
+		return "", nil, UserIsUnLogged
+	}
+
+	if !ok {
+		return u.checkTokenExpired(user)
+	}
+
+	return token, userInfoToken, nil
 }
 
 func (u *UserService) UnLogin(guid string) error {
@@ -85,8 +103,11 @@ func (u *UserService) Login(login string, password string) (string, *models.User
 		return "", nil, err
 	}
 
-	if user.IsLogged {
-		return "", nil, UserIsLogged
+	_, ok := tokenGen.VerifyToken(u.cfg.SecretKeyToken, user.RefreshToken)
+	if ok {
+		if user.IsLogged {
+			return "", nil, UserIsLogged
+		}
 	}
 
 	hashedPassword, err := u.postgres.GetHashPasswordByGuid(user.GUID)
@@ -94,7 +115,7 @@ func (u *UserService) Login(login string, password string) (string, *models.User
 		return "", nil, InvalidLoginPassword
 	}
 
-	ok := u.checkHashPassword(password, hashedPassword)
+	ok = u.checkHashPassword(password, hashedPassword)
 	if !ok {
 		return "", nil, InvalidLoginPassword
 	}
@@ -114,9 +135,7 @@ func (u *UserService) Login(login string, password string) (string, *models.User
 	return t, user, nil
 }
 
-func (u *UserService) Refresh(guid string, rt string) (string, *models.User, error) {
-	const op = "UserService.Refresh"
-
+func (u *UserService) Refresh(guid string) (string, *models.User, error) {
 	user, err := u.mongo.GetByGuid(guid)
 	if user == nil {
 		return "", nil, mongoRepo.ErrUserNotFound
@@ -127,27 +146,27 @@ func (u *UserService) Refresh(guid string, rt string) (string, *models.User, err
 		}
 	}
 
-	_, ok := tokenGen.VerifyToken(u.cfg.SecretKeyToken, rt)
+	_, ok := tokenGen.VerifyToken(u.cfg.SecretKeyToken, user.RefreshToken)
 	if !ok {
 		return "", nil, RefreshTokenExpiredError
 	}
 
-	if user.RefreshToken != rt {
-		u.log.Info("Refresh token is not valid", zap.String("op", op), zap.String("user_id", user.GUID))
-
-		return "", nil, RefreshTokenExpiredError
+	var newInfoToken *tokenGen.UserInfoToken
+	err = mapstructure.Decode(user, &newInfoToken)
+	if err != nil {
+		return "", nil, err
 	}
 
-	t, rt, err := u.generateTokens(user)
+	timeTExpired := time.Now().Add(u.cfg.TokenExpirationTimeMinutes * time.Minute)
+	t, err := tokenGen.NewToken(u.cfg.SecretKeyToken, timeTExpired, newInfoToken)
 
 	timeNow := time.Now()
-	err = u.mongo.UpdatedLoggingUser(user.GUID, rt, &timeNow)
+	err = u.mongo.UpdatedLoggingUser(user.GUID, user.RefreshToken, &timeNow)
 	if err != nil {
 		return "", nil, err
 	}
 
 	user.LastLoginAt = &timeNow
-	user.RefreshToken = rt
 
 	return t, user, nil
 }
@@ -241,4 +260,33 @@ func (u *UserService) generateTokens(user *models.User) (string, string, error) 
 	}
 
 	return t, rt, nil
+}
+
+func (u *UserService) checkTokenExpired(user *models.User) (string, *tokenGen.UserInfoToken, error) {
+	const op = "UserService.checkTokenExpired"
+
+	var NewUserInfoToken *tokenGen.UserInfoToken
+	err := mapstructure.Decode(user, &NewUserInfoToken)
+	if err != nil {
+		u.log.Error("can't decode user", zap.String("op", op), zap.Error(err))
+		return "", nil, err
+	}
+
+	t, _, err := u.Refresh(user.GUID)
+	if err != nil {
+		if errors.Is(err, RefreshTokenExpiredError) {
+			hashedPassword, errGetPassword := u.postgres.GetHashPasswordByGuid(user.GUID)
+			if errGetPassword != nil {
+				return "", nil, errGetPassword
+			}
+			newT, _, errReLogin := u.Login(user.Login, hashedPassword)
+			if errReLogin != nil {
+				return "", nil, errReLogin
+			}
+			return newT, NewUserInfoToken, nil
+		}
+		return "", nil, err
+	}
+
+	return t, NewUserInfoToken, nil
 }

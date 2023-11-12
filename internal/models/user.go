@@ -3,7 +3,7 @@ package models
 import "time"
 
 type User struct {
-	GUID         string     `bson:"guid,omitempty" json:"id,omitempty"`
+	GUID         string     `bson:"guid,omitempty" json:"id,omitempty" mapstructure:"user_id"`
 	Login        string     `bson:"login,omitempty" json:"login,omitempty"`
 	Name         string     `bson:"name,omitempty" json:"name,omitempty"`
 	LastName     string     `bson:"last_name,omitempty" json:"last_name,omitempty"`

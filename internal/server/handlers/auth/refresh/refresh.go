@@ -12,8 +12,7 @@ import (
 )
 
 type Request struct {
-	GUID         string `json:"id" validate:"required"`
-	RefreshToken string `json:"refresh_token" validate:"required"`
+	GUID string `json:"id" validate:"required"`
 }
 
 type Response struct {
@@ -61,7 +60,7 @@ func (h *HandlerRefresh) RefreshHandler() http.HandlerFunc {
 			return
 		}
 
-		t, user, err := h.userService.Refresh(req.GUID, req.RefreshToken)
+		t, user, err := h.userService.Refresh(req.GUID)
 		if err != nil {
 			render.JSON(w, r, resp.Error(err.Error()))
 			return

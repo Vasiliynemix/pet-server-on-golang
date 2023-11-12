@@ -76,6 +76,8 @@ func (h *HandlerLogin) LoginHandler() http.HandlerFunc {
 			return
 		}
 
+		w.Header().Set("Authorization", "Bearer "+t)
+
 		response := Response{
 			Response:     resp.OK(),
 			Token:        t,

@@ -6,6 +6,7 @@ import (
 	"PetProjectGo/internal/server/handlers/auth/refresh"
 	"PetProjectGo/internal/server/handlers/auth/register"
 	"PetProjectGo/internal/server/handlers/auth/unlogin"
+	userGroup "PetProjectGo/internal/server/handlers/user"
 	mwLogger "PetProjectGo/internal/server/middleware/logger"
 	"PetProjectGo/internal/services"
 	"PetProjectGo/pkg/logging"
@@ -24,6 +25,7 @@ type Server struct {
 	mongo    *mongodb.MongoDB
 	postgres *sqlx.DB
 	auth     *GroupServerAuth
+	user     *GroupServerUser
 }
 
 type GroupServerAuth struct {
@@ -31,6 +33,10 @@ type GroupServerAuth struct {
 	login    *login.HandlerLogin
 	unlogin  *unlogin.HandlerUnLogin
 	refresh  *refresh.HandlerRefresh
+}
+
+type GroupServerUser struct {
+	userInfo *userGroup.HandlerUserGet
 }
 
 func NewWebServer(
@@ -45,6 +51,7 @@ func NewWebServer(
 		cfg:    cfg,
 		router: chi.NewRouter(),
 		auth:   NewGroupAuth(cfg, log, userService),
+		user:   NewGroupUser(log, userService),
 	}
 }
 
@@ -58,6 +65,15 @@ func NewGroupAuth(
 		login:    login.NewHandlerLogin(log, userService),
 		unlogin:  unlogin.NewHandlerUnLogin(log, userService),
 		refresh:  refresh.NewHandlerRefresh(log, userService),
+	}
+}
+
+func NewGroupUser(
+	log *logging.Logger,
+	userService *services.UserService,
+) *GroupServerUser {
+	return &GroupServerUser{
+		userInfo: userGroup.NewHandlerUserGet(log, userService),
 	}
 }
 
@@ -98,5 +114,10 @@ func (s *Server) registerRouters() {
 		r.Post("/login", s.auth.login.LoginHandler())
 		r.Post("/unlogin", s.auth.unlogin.UnLoginHandler())
 		r.Post("/refresh", s.auth.refresh.RefreshHandler())
+	})
+
+	s.log.Info("Registering user group")
+	s.router.Route("/user", func(r chi.Router) {
+		r.Get("/me", s.user.userInfo.UserGetHandler())
 	})
 }

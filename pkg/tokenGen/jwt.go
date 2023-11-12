@@ -1,7 +1,9 @@
 package tokenGen
 
 import (
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -40,21 +42,26 @@ func VerifyToken(secret string, token string) (*UserInfoToken, bool) {
 			return []byte(secret), nil
 		},
 	)
+
+	userInfo, ok := t.Claims.(*jWTUserInfoClaims)
+	if !ok {
+		return nil, false
+	}
+
 	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return userInfo.User, false
+		}
 		return nil, false
 	}
 
 	expTime, err := t.Claims.GetExpirationTime()
+	fmt.Println("expTime", expTime)
 	if err != nil {
 		return nil, false
 	}
 
 	if !t.Valid || expTime.Before(time.Now()) {
-		return nil, false
-	}
-
-	userInfo, ok := t.Claims.(*jWTUserInfoClaims)
-	if !ok {
 		return nil, false
 	}
 
