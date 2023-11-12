@@ -14,7 +14,7 @@ import (
 	"regexp"
 )
 
-var DuplicateNameError = fmt.Errorf("category with duplicate name")
+var DuplicateCategoryNameError = fmt.Errorf("category with duplicate name")
 var ErrCategoryNotFound = fmt.Errorf("category not found")
 
 type CategoryRepoM struct {
@@ -127,7 +127,7 @@ func (u *CategoryRepoM) generateDuplicateErrorC(err mongo.WriteException) error 
 			matches := re.FindStringSubmatch(we.Message)
 
 			if len(matches) > 1 {
-				errorMsg := fmt.Sprintf("%s: Duplicate key violation for index: %s", DuplicateNameError, matches[1])
+				errorMsg := fmt.Sprintf("%s: Duplicate key violation for index: %s", DuplicateCategoryNameError, matches[1])
 				return errors.New(errorMsg)
 			}
 		}

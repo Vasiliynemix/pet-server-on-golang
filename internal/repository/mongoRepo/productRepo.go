@@ -14,6 +14,8 @@ import (
 	"regexp"
 )
 
+var DuplicateProductNameError = fmt.Errorf("product with duplicate name")
+
 type ProductRepoM struct {
 	log        *logging.Logger
 	mongo      *mongodb.MongoDB
@@ -62,6 +64,42 @@ func (u *ProductRepoM) AddNewProduct(product *models.Product) error {
 	return nil
 }
 
+func (u *ProductRepoM) GetProductsByCategoryGuid(categoryGuid string) ([]*models.Product, error) {
+	const op = "ProductRepoM.GetProductsByCategoryGuid"
+	collection := u.mongo.GetCollection(u.collection)
+
+	filter := bson.M{
+		"category_id": categoryGuid,
+	}
+
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		u.log.Error("Error getting products", zap.String("op", op), zap.Error(err))
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	var products []*models.Product
+	for cursor.Next(context.TODO()) {
+		var product models.Product
+
+		err = cursor.Decode(&product)
+		if err != nil {
+			u.log.Error("Error decoding product", zap.String("op", op), zap.Error(err))
+			return nil, err
+		}
+
+		products = append(products, &product)
+	}
+
+	if err = cursor.Err(); err != nil {
+		u.log.Error("Error getting products", zap.String("op", op), zap.Error(err))
+		return nil, err
+	}
+
+	return products, nil
+}
+
 func (u *ProductRepoM) generateDuplicateErrorP(err mongo.WriteException) error {
 	const op = "ProductRepoM.generateDuplicateErrorP"
 
@@ -73,7 +111,7 @@ func (u *ProductRepoM) generateDuplicateErrorP(err mongo.WriteException) error {
 			matches := re.FindStringSubmatch(we.Message)
 
 			if len(matches) > 1 {
-				errorMsg := fmt.Sprintf("%s: Duplicate key violation for index: %s", DuplicateNameError, matches[1])
+				errorMsg := fmt.Sprintf("%s: Duplicate key violation for index: %s", DuplicateProductNameError, matches[1])
 				return errors.New(errorMsg)
 			}
 		}

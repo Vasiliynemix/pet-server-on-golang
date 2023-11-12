@@ -8,6 +8,7 @@ import (
 	"PetProjectGo/internal/server/handlers/auth/unlogin"
 	"PetProjectGo/internal/server/handlers/market/category"
 	"PetProjectGo/internal/server/handlers/market/product"
+	"PetProjectGo/internal/server/handlers/market/product/productFilter"
 	userGroup "PetProjectGo/internal/server/handlers/user"
 	mwLogger "PetProjectGo/internal/server/middleware/logger"
 	"PetProjectGo/internal/services"
@@ -43,8 +44,9 @@ type GroupServerUser struct {
 }
 
 type GroupServerMarket struct {
-	category *category.HandlerCategoryAdd
-	product  *product.HandlerProductAdd
+	category             *category.HandlerCategoryAdd
+	product              *product.HandlerProductAdd
+	productAllByCategory *productFilter.HandlerProductGetByCompanyGuid
 }
 
 func NewWebServer(
@@ -101,8 +103,9 @@ func NewGroupMarket(
 	productService *services.MarketProductService,
 ) *GroupServerMarket {
 	return &GroupServerMarket{
-		category: category.NewHandlerCategoryAdd(log, categoryService),
-		product:  product.NewHandlerProductAdd(log, productService),
+		category:             category.NewHandlerCategoryAdd(log, categoryService),
+		product:              product.NewHandlerProductAdd(log, productService),
+		productAllByCategory: productFilter.NewHandlerProductGetByCompanyGuid(log, productService),
 	}
 }
 
@@ -158,5 +161,6 @@ func (s *Server) registerRouters() {
 	s.log.Info("Registering product group")
 	s.router.Route("/product", func(r chi.Router) {
 		r.Post("/add", s.market.product.AddProductHandler())
+		r.Get("/all", s.market.productAllByCategory.AddProductGetByCompanyGuidHandler())
 	})
 }

@@ -35,6 +35,23 @@ func NewMarketProductService(
 	}, nil
 }
 
+func (p *MarketProductService) GetAllByCompanyGuid(guid string) ([]*models.Product, error) {
+	_, err := p.category.GetByGuid(guid)
+	if err != nil {
+		return nil, err
+	}
+
+	products, err := p.mongo.GetProductsByCategoryGuid(guid)
+	if err != nil {
+		return nil, err
+	}
+	if products == nil {
+		return []*models.Product{}, nil
+	}
+
+	return products, nil
+}
+
 func (p *MarketProductService) AddProduct(product *NewProductM) (*models.Product, error) {
 	_, err := p.category.GetByGuid(product.CategoryGuid)
 	if err != nil {
