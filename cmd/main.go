@@ -64,7 +64,10 @@ func main() {
 		logger.Error("Postgres migration error", zap.Error(err))
 	}
 
-	srv := server.NewWebServer(logger, cfg, mongoDB, postgresDB)
+	srv, err := server.NewWebServer(logger, cfg, mongoDB, postgresDB)
+	if err != nil {
+		logger.Error("Error creating server", zap.Error(err))
+	}
 	go srv.Run()
 
 	//Graceful shutdown

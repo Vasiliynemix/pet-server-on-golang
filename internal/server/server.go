@@ -6,6 +6,8 @@ import (
 	"PetProjectGo/internal/server/handlers/auth/refresh"
 	"PetProjectGo/internal/server/handlers/auth/register"
 	"PetProjectGo/internal/server/handlers/auth/unlogin"
+	"PetProjectGo/internal/server/handlers/market/category"
+	"PetProjectGo/internal/server/handlers/market/product"
 	userGroup "PetProjectGo/internal/server/handlers/user"
 	mwLogger "PetProjectGo/internal/server/middleware/logger"
 	"PetProjectGo/internal/services"
@@ -26,6 +28,7 @@ type Server struct {
 	postgres *sqlx.DB
 	auth     *GroupServerAuth
 	user     *GroupServerUser
+	market   *GroupServerMarket
 }
 
 type GroupServerAuth struct {
@@ -39,20 +42,31 @@ type GroupServerUser struct {
 	userInfo *userGroup.HandlerUserGet
 }
 
+type GroupServerMarket struct {
+	category *category.HandlerCategoryAdd
+	product  *product.HandlerProductAdd
+}
+
 func NewWebServer(
 	log *logging.Logger,
 	cfg *config.Config,
 	mongo *mongodb.MongoDB,
 	postgres *sqlx.DB,
-) *Server {
+) (*Server, error) {
 	userService := services.NewUserService(log, &cfg.App, mongo, postgres)
+	marketCService, err := services.NewMarketCategoryService(mongo, userService)
+	if err != nil {
+		return nil, err
+	}
+	marketPService := services.NewMarketProductService(mongo, marketCService)
 	return &Server{
 		log:    log,
 		cfg:    cfg,
 		router: chi.NewRouter(),
 		auth:   NewGroupAuth(cfg, log, userService),
 		user:   NewGroupUser(log, userService),
-	}
+		market: NewGroupMarket(log, marketCService, marketPService),
+	}, nil
 }
 
 func NewGroupAuth(
@@ -74,6 +88,17 @@ func NewGroupUser(
 ) *GroupServerUser {
 	return &GroupServerUser{
 		userInfo: userGroup.NewHandlerUserGet(log, userService),
+	}
+}
+
+func NewGroupMarket(
+	log *logging.Logger,
+	categoryService *services.MarketCategoryService,
+	productService *services.MarketProductService,
+) *GroupServerMarket {
+	return &GroupServerMarket{
+		category: category.NewHandlerCategoryAdd(log, categoryService),
+		product:  product.NewHandlerProductAdd(log, productService),
 	}
 }
 
@@ -119,5 +144,15 @@ func (s *Server) registerRouters() {
 	s.log.Info("Registering user group")
 	s.router.Route("/user", func(r chi.Router) {
 		r.Get("/me", s.user.userInfo.UserGetHandler())
+	})
+
+	s.log.Info("Registering category group")
+	s.router.Route("/category", func(r chi.Router) {
+		r.Post("/add", s.market.category.AddCategoryHandler())
+	})
+
+	s.log.Info("Registering product group")
+	s.router.Route("/product", func(r chi.Router) {
+		r.Post("/add", s.market.product.AddProductHandler())
 	})
 }
