@@ -1,0 +1,15 @@
+{{template "base" .}}
+
+{{define "title"}}Домашняя страницы{{end}}
+
+{{define "main"}}
+    <!-- registrationForm -->
+    {{template "registrationForm" .}}
+
+    <!-- Categories -->
+    {{template "categories" .}}
+
+    <!-- Users -->
+    {{template "users" .}}
+
+{{end}}

@@ -2,6 +2,7 @@ package server
 
 import (
 	"PetProjectGo/internal/config"
+	"PetProjectGo/internal/server/handlers"
 	"PetProjectGo/internal/server/handlers/auth/login"
 	"PetProjectGo/internal/server/handlers/auth/refresh"
 	"PetProjectGo/internal/server/handlers/auth/register"
@@ -27,6 +28,7 @@ type Server struct {
 	router   *chi.Mux
 	mongo    *mongodb.MongoDB
 	postgres *sqlx.DB
+	index    *handlers.HandlerIndex
 	auth     *GroupServerAuth
 	user     *GroupServerUser
 	market   *GroupServerMarket
@@ -45,6 +47,7 @@ type GroupServerUser struct {
 
 type GroupServerMarket struct {
 	category             *category.HandlerCategoryAdd
+	categoryAll          *category.HandlerCategoryAll
 	product              *product.HandlerProductAdd
 	productAllByCategory *productFilter.HandlerProductGetByCompanyGuid
 }
@@ -69,6 +72,7 @@ func NewWebServer(
 		log:    log,
 		cfg:    cfg,
 		router: chi.NewRouter(),
+		index:  handlers.NewHandlerIndex(log, userService, marketCService, marketPService),
 		auth:   NewGroupAuth(cfg, log, userService),
 		user:   NewGroupUser(log, userService),
 		market: NewGroupMarket(log, marketCService, marketPService),
@@ -104,6 +108,7 @@ func NewGroupMarket(
 ) *GroupServerMarket {
 	return &GroupServerMarket{
 		category:             category.NewHandlerCategoryAdd(log, categoryService),
+		categoryAll:          category.NewHandlerCategoryAll(log, categoryService),
 		product:              product.NewHandlerProductAdd(log, productService),
 		productAllByCategory: productFilter.NewHandlerProductGetByCompanyGuid(log, productService),
 	}
@@ -140,6 +145,9 @@ func (s *Server) registerMiddlewares() {
 func (s *Server) registerRouters() {
 	s.log.Info("Registering routers")
 
+	s.log.Info("Registering main path")
+	s.router.Get("/", s.index.IndexHandler())
+
 	s.log.Info("Registering auth group")
 	s.router.Route("/auth", func(r chi.Router) {
 		r.Post("/register", s.auth.register.RegisterHandler())
@@ -156,6 +164,7 @@ func (s *Server) registerRouters() {
 	s.log.Info("Registering category group")
 	s.router.Route("/category", func(r chi.Router) {
 		r.Post("/add", s.market.category.AddCategoryHandler())
+		r.Get("/all", s.market.categoryAll.AllCategoriesHandler())
 	})
 
 	s.log.Info("Registering product group")

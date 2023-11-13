@@ -54,7 +54,7 @@ func (u *CategoryRepoM) GetCategories() ([]*models.Category, error) {
 
 	collection := u.mongo.GetCollection(u.collection)
 
-	filter := bson.D{}
+	filter := bson.M{}
 
 	cursor, err := collection.Find(context.TODO(), filter)
 	if err != nil {

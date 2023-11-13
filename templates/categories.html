@@ -1,0 +1,11 @@
+{{define "categories"}}
+    <h2>Categories</h2>
+    <ul id="categoryList">
+        {{range $guid, $data := .Categories}}
+            <li>
+                Название категории: {{ $data.Category.Name }}
+                {{template "products" $data}}
+            </li>
+        {{end}}
+    </ul>
+{{end}}

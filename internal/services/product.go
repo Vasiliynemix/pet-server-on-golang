@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const productCollection = "products"
+
 type NewProductM struct {
 	CategoryGuid string `json:"category_id" mapstructure:"category_id"`
 	Name         string `json:"name"`
@@ -24,7 +26,7 @@ func NewMarketProductService(
 	mongo *mongodb.MongoDB,
 	categoryService *MarketCategoryService,
 ) (*MarketProductService, error) {
-	mongoDb := mongoRepo.NewProductRepoM(categoryService.user.log, mongo, "products")
+	mongoDb := mongoRepo.NewProductRepoM(categoryService.user.log, mongo, productCollection)
 	err := mongoDb.CreateIndexesProduct()
 	if err != nil {
 		return nil, err

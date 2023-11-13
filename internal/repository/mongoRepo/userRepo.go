@@ -108,6 +108,38 @@ func (u *UserRepoM) GetByLogin(login string) (*models.User, error) {
 	return user, nil
 }
 
+func (u *UserRepoM) GetAllUsers() ([]*models.User, error) {
+	const op = "UserRepoM.GetByRefreshToken"
+	collection := u.mongo.GetCollection(u.collection)
+	filter := bson.M{}
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		u.log.Error("Error getting users", zap.String("op", op), zap.Error(err))
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	var users []*models.User
+	for cursor.Next(context.TODO()) {
+		var user models.User
+
+		err = cursor.Decode(&user)
+		if err != nil {
+			u.log.Error("Error decoding user", zap.String("op", op), zap.Error(err))
+			return nil, err
+		}
+
+		users = append(users, &user)
+	}
+
+	if err = cursor.Err(); err != nil {
+		u.log.Error("Error getting users", zap.String("op", op), zap.Error(err))
+		return nil, err
+	}
+
+	return users, nil
+}
+
 func (u *UserRepoM) GetByGuid(guid string) (*models.User, error) {
 	const op = "UserRepoM.GetByGuid"
 	var user *models.User

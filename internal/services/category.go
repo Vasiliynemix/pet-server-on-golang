@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const categoryCollection = "categories"
+
 type MarketCategoryService struct {
 	mongo *mongoRepo.CategoryRepoM
 	user  *UserService
@@ -16,7 +18,7 @@ func NewMarketCategoryService(
 	mongo *mongodb.MongoDB,
 	userService *UserService,
 ) (*MarketCategoryService, error) {
-	mongoDb := mongoRepo.NewCategoryRepoM(userService.log, mongo, "categories")
+	mongoDb := mongoRepo.NewCategoryRepoM(userService.log, mongo, categoryCollection)
 	err := mongoDb.CreateIndexesCategory()
 	if err != nil {
 		return nil, err

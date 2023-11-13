@@ -35,6 +35,9 @@ func NewToken(secret string, expirationAt time.Time, userInfo *UserInfoToken) (s
 }
 
 func VerifyToken(secret string, token string) (*UserInfoToken, bool) {
+	if token == "" {
+		return nil, true
+	}
 	t, err := jwt.ParseWithClaims(
 		token,
 		&jWTUserInfoClaims{},

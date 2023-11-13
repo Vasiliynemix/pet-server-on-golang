@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const userCollection = "users"
+
 var ErrUserAlreadyExists = fmt.Errorf("user already exists")
 var InvalidLoginPassword = fmt.Errorf("invalid login or password")
 var RefreshTokenExpiredError = fmt.Errorf("refresh token expired")
@@ -45,7 +47,7 @@ func NewUserService(
 	mongo *mongodb.MongoDB,
 	postgres *sqlx.DB,
 ) *UserService {
-	mongoDb := mongoRepo.NewUserRepoM(log, mongo, "users")
+	mongoDb := mongoRepo.NewUserRepoM(log, mongo, userCollection)
 	postgresDb := postgresRepo.NewUserRepoP(log, postgres)
 	return &UserService{
 		log:      log,
@@ -53,6 +55,14 @@ func NewUserService(
 		mongo:    mongoDb,
 		postgres: postgresDb,
 	}
+}
+
+func (u *UserService) GetAllUsers() ([]*models.User, error) {
+	users, err := u.mongo.GetAllUsers()
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 func (u *UserService) GetMeInfo(token string) (string, *tokenGen.UserInfoToken, error) {

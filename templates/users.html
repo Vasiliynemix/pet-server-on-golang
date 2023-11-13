@@ -1,0 +1,8 @@
+{{define "users"}}
+    <h2>Users</h2>
+    <ul id="categoryList">
+        {{range $data := .Users}}
+            <li>данные пользователя: {{ $data.Login }}, {{$data.IsLogged}}</li>
+        {{end}}
+    </ul>
+{{end}}

@@ -1,0 +1,7 @@
+{{define "products"}}
+    <ul id="{{.Category.GUID}}">
+        {{range .Products}}
+            <li>Продукт: {{.Name}}</li>
+        {{end}}
+    </ul>
+{{end}}

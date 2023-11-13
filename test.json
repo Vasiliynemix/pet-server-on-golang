@@ -1,0 +1,43 @@
+{
+  "data": {
+    "Categories": {
+      "786414b9-c95c-4c68-9bb4-10f84a4eb89f": {
+        "Category": {
+          "id": "786414b9-c95c-4c68-9bb4-10f84a4eb89f",
+          "name": "category11"
+        },
+        "Products": []
+      },
+      "bddf419a-b2f2-453c-9726-7143bfd0dbb8": {
+        "Category": {
+          "id": "bddf419a-b2f2-453c-9726-7143bfd0dbb8",
+          "name": "category1"
+        },
+        "Products": [
+          {
+            "id": "1372cdd2-dd5c-4c41-9ca9-5ce0e8dc6ae5",
+            "category_id": "bddf419a-b2f2-453c-9726-7143bfd0dbb8",
+            "name": "name1111111",
+            "description": "description",
+            "price": 100
+          },
+          {
+            "id": "a9f51629-1dc8-4b75-96c5-a54d2f4462ef",
+            "category_id": "bddf419a-b2f2-453c-9726-7143bfd0dbb8",
+            "name": "name11111111",
+            "description": "description",
+            "price": 100
+          },
+          {
+            "id": "ec6036b8-b872-467c-a8d2-af8a4894167d",
+            "category_id": "bddf419a-b2f2-453c-9726-7143bfd0dbb8",
+            "name": "qwerty",
+            "description": "description",
+            "price": 100
+          }
+        ]
+      }
+    },
+    "Users": null
+  }
+}

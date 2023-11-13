@@ -70,6 +70,7 @@ func (h *HandlerCategoryAdd) AddCategoryHandler() http.HandlerFunc {
 			render.JSON(w, r, resp.Error(err.Error()))
 			return
 		}
+
 		render.JSON(w, r, ResponseCategory{
 			Response:   resp.OK(),
 			Categories: categories,
